@@ -1,0 +1,177 @@
+"""
+Watercolor Bouquet - a blooming, hand-painted-style bouquet in the browser.
+
+Run:
+    pip install flask
+    python app.py
+Then open http://localhost:5000   (try /?to=For%20Anna&note=forever%20yours)
+"""
+import html
+from flask import Flask, Response, request
+
+app = Flask(__name__)
+
+PAGE = r"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>__TO__</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Great+Vibes&display=swap" rel="stylesheet">
+<style>
+:root{--charcoal:#2E2A2B;--paper:#FAF8F5;--rose:#b8607f}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{display:flex;flex-direction:column;color:var(--charcoal);font-family:'Cormorant Garamond',Georgia,serif;
+ background:radial-gradient(ellipse at 50% 42%,#fff 0,var(--paper) 58%,#f2ede6 100%);
+ padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+header{text-align:center;padding:14px 14px 0;min-height:92px}
+h1{margin:0;font:400 clamp(36px,8vw,60px)/1.1 'Great Vibes','Snell Roundhand',cursive;color:var(--rose);opacity:0}
+#noteT{margin:2px 0 0;font-style:italic;font-size:clamp(16px,3.4vw,20px);letter-spacing:.04em;opacity:0}
+svg{flex:1;min-height:0;width:100%;display:block}
+.bar{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center;padding:8px 12px 14px}
+button,input{font:inherit;font-size:16px;color:var(--charcoal)}
+button{border:1px solid #cdbfc0;background:#fffdfb;padding:7px 16px;border-radius:999px;cursor:pointer;transition:background .2s,border-color .2s}
+button:hover{background:#fbeff3;border-color:var(--rose)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
+.seg{display:flex;border:1px solid #cdbfc0;border-radius:999px;overflow:hidden;background:#fffdfb}
+.seg button{border:0;border-radius:0;padding:7px 13px;background:none}
+.seg button.on{background:#f6d9e3;font-weight:600}
+input{border:0;border-bottom:1px solid #cdbfc0;background:transparent;padding:6px 4px;width:150px;text-align:center}
+</style></head><body>
+<header><h1 id="title">__TO__</h1><p id="noteT">__NOTE__</p></header>
+<svg id="art" viewBox="0 0 600 820" preserveAspectRatio="xMidYMid meet" aria-label="A watercolor bouquet blooming">
+<defs>
+<filter id="wc" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4" xChannelSelector="R" yChannelSelector="G"/></filter>
+<filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="9"/><feColorMatrix values="0 0 0 0 .5  0 0 0 0 .45  0 0 0 0 .42  0 0 0 .5 0"/></filter>
+</defs>
+<g id="bq" filter="url(#wc)"><g id="stemsL"></g><g id="leavesL"></g><g id="flowersL"></g><g id="ribbonL"></g></g>
+<g id="pol"></g>
+<rect width="600" height="820" filter="url(#grain)" opacity=".10" pointer-events="none"/>
+</svg>
+<div class="bar">
+<button id="replay">Replay bloom</button>
+<div class="seg" role="group" aria-label="Speed"><button data-s=".6">Slow</button><button data-s="1" class="on">Normal</button><button data-s="1.8">Fast</button></div>
+<input id="inT" value="__TO__" maxlength="40" aria-label="Title">
+<input id="inN" value="__NOTE__" maxlength="70" aria-label="Note">
+</div>
+<script>
+const $=s=>document.querySelector(s),NS='http://www.w3.org/2000/svg';
+const el=(t,a,p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p&&p.appendChild(e);return e};
+let seed=11;const rnd=()=>(seed=seed*16807%2147483647,(seed-1)/2147483646);
+const cl=(x,a=0,b=1)=>Math.min(b,Math.max(a,x)),eo=p=>1-(1-p)**3,eb=p=>1+2.4*(p-1)**3+1.4*(p-1)**2;
+const INK='#2E2A2B',IS='stroke-opacity:var(--ink,0)',defs=$('#art defs'),ups=[];
+function G(n,a,b,h){const l=el('linearGradient',h?{id:'g-'+n,x1:0,y1:0,x2:1,y2:0}:{id:'g-'+n,x1:0,y1:1,x2:0,y2:0},defs);
+ el('stop',{offset:0,'stop-color':a},l);el('stop',{offset:1,'stop-color':b},l);
+ const r=el('radialGradient',{id:'w-'+n},defs);el('stop',{offset:0,'stop-color':a,'stop-opacity':.38},r);el('stop',{offset:1,'stop-color':a,'stop-opacity':0},r)}
+[['peri','#7d8fd6','#d3dcf7'],['teal','#3f9fb0','#bfe6ea'],['pink','#e98aa9','#fbdce6'],['peony','#ec92b0','#fde4ec'],['peony2','#f4b3c8','#fff0f5'],
+ ['lily','#e0689a','#fadbe6'],['gold','#e6a91c','#fbe48d'],['gold2','#d38a14','#f6cf5a'],['coral','#ee5f2c','#fbb98a'],['coral2','#f58a4b','#fddcb8'],
+ ['crim','#a80f2c','#e8566d'],['crim2','#cf2f4b','#f3a0ae'],['violet','#6a55b8','#c1b3ee']].forEach(a=>G(...a));
+G('leafA','#4a8452','#a8d39f',1);G('leafB','#3b7a5c','#93c9a6',1);G('rib','#ee9db9','#fde6ee');
+const stemsL=$('#stemsL'),leavesL=$('#leavesL'),flowersL=$('#flowersL'),ribL=$('#ribbonL');
+
+/* ---- flowers ---- */
+function ring(f,g,n,len,wid,rot0,layer,pt,spots){
+ for(let i=0;i<n;i++){
+  const w=el('g',{transform:`rotate(${rot0+i*360/n+(rnd()-.5)*8})`},f.core),k=el('g',{},w),l=len*(.92+rnd()*.16);
+  const d=pt?`M0,0 C${-wid},${-l*.25} ${-wid*.35},${-l*.7} 0,${-l} C${wid*.35},${-l*.7} ${wid},${-l*.25} 0,0Z`
+            :`M0,0 C${-wid},${-l*.3} ${-wid*.85},${-l*.95} 0,${-l} C${wid*.85},${-l*.95} ${wid},${-l*.3} 0,0Z`;
+  el('path',{d,fill:`url(#g-${g})`,'fill-opacity':.86,stroke:INK,'stroke-width':.9,'stroke-linejoin':'round',style:IS},k);
+  el('path',{d:`M0,${-l*.08} Q${wid*.12},${-l*.5} 0,${-l*.82}`,fill:'none',stroke:INK,'stroke-width':.5,style:IS},k);
+  for(let s=0;s<(spots||0);s++){const y=-l*(.25+rnd()*.55);el('circle',{cx:(rnd()-.5)*wid*.8*(1-Math.abs(y)/l),cy:y,r:.8+rnd()*1.2,fill:'#9a2347','fill-opacity':.75},k)}
+  f.parts.push({n:k,d:layer*.13+i*.02})}}
+function wash(f,g,r,dy=0){const w=el('g',{transform:`translate(0,${dy})`},f.core),c=el('circle',{r,fill:`url(#w-${g})`},w);f.parts.push({n:c,d:0})}
+function ctr(f,r,col,dots,dc){const g=el('g',{},f.core);el('circle',{r,fill:col,stroke:INK,'stroke-width':.8,style:IS},g);
+ for(let i=0;i<dots;i++){const a=rnd()*6.28,q=Math.sqrt(rnd())*r*.85;el('circle',{cx:Math.cos(a)*q,cy:Math.sin(a)*q,r:.7+rnd()*.9,fill:dc||'#8a5a1e','fill-opacity':.8},g)}f.parts.push({n:g,d:.45})}
+function stamens(f,L){const g=el('g',{},f.core);for(let i=0;i<6;i++){const a=(i*60+rnd()*20)*Math.PI/180,x=Math.sin(a)*L*.34,y=-Math.cos(a)*L*.34;
+ el('path',{d:`M0,0 Q${x*.4},${y*.6} ${x},${y}`,fill:'none',stroke:INK,'stroke-width':.7,style:IS},g);el('ellipse',{cx:x,cy:y,rx:2.4,ry:1.5,fill:'#8a3b1d',transform:`rotate(${a*57.3} ${x} ${y})`},g)}f.parts.push({n:g,d:.45})}
+function bell(f,L){wash(f,'violet',L*1.1,L*.6);const g=el('g',{},f.core),k=el('g',{},g);
+ el('path',{d:`M${-.1*L},0 C${-.5*L},${.1*L} ${-.55*L},${.7*L} ${-.7*L},${.95*L} Q0,${1.2*L} ${.7*L},${.95*L} C${.55*L},${.7*L} ${.5*L},${.1*L} ${.1*L},0Z`,fill:'url(#g-violet)','fill-opacity':.88,stroke:INK,'stroke-width':.9,style:IS},k);
+ [-.3,0,.3].forEach(x=>el('path',{d:`M${x*L*.4},${.12*L} Q${x*L*.9},${.6*L} ${x*L*1.5},${1.04*L}`,fill:'none',stroke:INK,'stroke-width':.5,style:IS},k));
+ el('circle',{cx:0,cy:1.12*L,r:L*.07,fill:'#e6a91c'},k);f.parts.push({n:k,d:.1})}
+const SP=[ // type, palette, x, y, size, rotation
+['star','crim',405,478,44,10],['lily','coral',300,405,66,-6],['small','pink',190,430,15,0],['small','pink',222,462,14,20],['small','pink',166,468,13,-10],
+['sun','gold',462,380,44,0],['lily','lily',438,262,60,18],['lily','lily',235,322,48,-22],['five','teal',150,282,36,10],['five','teal',172,352,30,-14],
+['bell','violet',350,282,36,0],['five','peri',212,140,40,-8],['five','peri',388,112,36,14],['five','peri',456,176,30,22],['peony','peony',300,205,76,0]];
+function build(t,p,x,y,L,rot){
+ const outer=el('g',{},flowersL),core=el('g',{},outer),f={outer,core,x,y,rot,parts:[],ph:rnd()*6.28};
+ if(t!=='bell')wash(f,p,L*1.15);
+ if(t==='five'){ring(f,p,5,L,L*.5,0,0);ctr(f,L*.14,'#f2c94c',8)}
+ if(t==='small'){ring(f,p,5,L,L*.6,0,0);ctr(f,L*.2,'#f2c94c',4)}
+ if(t==='peony'){ring(f,'peony',9,L,L*.52,0,0);ring(f,'peony2',8,L*.8,L*.45,20,1);ring(f,'peony',6,L*.58,L*.38,10,2);ring(f,'peony2',5,L*.34,L*.26,0,3);ctr(f,L*.11,'#e9b52e',14,'#a8731a')}
+ if(t==='lily'){const c=p==='coral';ring(f,c?'coral':'lily',3,L,L*.3,0,0,1,c?5:14);ring(f,c?'coral2':'pink',3,L*.92,L*.28,60,1,1,c?4:12);stamens(f,L)}
+ if(t==='sun'){ring(f,'gold',18,L,L*.13,0,0,1);ring(f,'gold2',14,L*.82,L*.12,10,1,1);ctr(f,L*.36,'#5a3a22',46,'#2e1d12')}
+ if(t==='star'){ring(f,'crim',5,L,L*.34,0,0,1);ring(f,'crim2',5,L*.55,L*.2,36,1,1);ctr(f,L*.08,'#3a0a14',0)}
+ if(t==='bell')bell(f,L);
+ f.up=q=>{for(const o of f.parts){const l=cl((q-o.d)/.4);o.n.setAttribute('transform',l<=0?'scale(0)':`rotate(${(1-l)*-28}) scale(${eb(l)})`)}
+  core.style.setProperty('--ink',(.8*cl((q-.55)/.4)).toFixed(3))};
+ f.sw=a=>outer.setAttribute('transform',`translate(${x} ${y}) rotate(${rot+a})`);f.sw(0);f.up(0);return f}
+function leaf(x,y,ang,s,st,v){
+ const g=el('g',{},leavesL),k=v?'leafB':'leafA';
+ el('path',{d:'M0,0 C12,-15 40,-19 62,0 C40,19 12,15 0,0Z',fill:`url(#g-${k})`,'fill-opacity':.9,stroke:INK,'stroke-width':1,'stroke-linejoin':'round',style:IS},g);
+ el('path',{d:'M2,0 Q30,-2 56,0 M18,0 L30,-8 M18,0 L30,8 M34,-1 L46,-7 M34,1 L46,7',fill:'none',stroke:INK,'stroke-width':.5,style:IS},g);
+ ups.push(T=>{const p=cl((T-st)/1.3),e=eo(p);g.setAttribute('transform',`translate(${x} ${y}) rotate(${ang-(1-e)*25}) scale(${Math.max(e*s,.001)})`);g.style.setProperty('--ink',(.75*cl((p-.4)*1.7)).toFixed(3))})}
+
+const BX=300,BY=650,FL=[];
+SP.forEach(([t,p,x,y,L,r],i)=>{
+ const f=build(t,p,x,y,L,r),bx=BX+(rnd()-.5)*14,ey=y+(t==='bell'?0:L*.15),o=(rnd()-.5)*50;
+ const d=`M${bx},${BY} C${bx+(x-bx)*.1+o},${BY-(BY-ey)*.35} ${x-(x-bx)*.15-o},${ey+(BY-ey)*.3} ${x},${ey}`,w=L>40?3.4:2.4,st=i*.12;
+ const a=el('path',{d,pathLength:1,fill:'none',stroke:i%2?'#5d9159':'#4f8a55','stroke-width':w,'stroke-linecap':'round','stroke-dasharray':1,'stroke-dashoffset':1},stemsL);
+ const b=el('path',{d,pathLength:1,fill:'none',stroke:INK,'stroke-width':.6,'stroke-opacity':.45,'stroke-dasharray':1,'stroke-dashoffset':1},stemsL);
+ ups.push(T=>{const e=eo(cl((T-st)/2.6));[a,b].forEach(n=>{n.setAttribute('stroke-dashoffset',1-e);n.style.opacity=e>0?1:0})});
+ const tl=a.getTotalLength(),n=L>30?2:1;
+ for(let j=0;j<n;j++){const t0=.3+rnd()*.4,pt=a.getPointAtLength(tl*t0),p2=a.getPointAtLength(tl*(t0+.03)),side=(j%2?1:-1)*(i%2?1:-1);
+  leaf(pt.x,pt.y,Math.atan2(p2.y-pt.y,p2.x-pt.x)*57.3+side*(38+rnd()*20),.6+rnd()*.5,st+t0*2.6+.2,i%3===0)}
+ const fs=3+i*.32;ups.push(T=>f.up(cl((T-fs)/2.4)));FL.push(f)});
+for(let i=0;i<9;i++){const s=i%2?1:-1;leaf(BX+(rnd()-.5)*16,BY-14-rnd()*20,-90+s*(28+rnd()*50),1+rnd()*.5,1.4+i*.18,i%2)}
+
+/* ---- ribbon ---- */
+const rb=el('g',{},ribL),RO=`stroke="${INK}" stroke-width="1" style="${IS}" fill="url(#g-rib)" fill-opacity=".92" stroke-linejoin="round"`;
+const mk=(d,x)=>{const g=el('g',{},rb);g.innerHTML=`<path d="${d}" ${RO}/>${x||''}`;return g};
+const sh='fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.6" stroke-linecap="round"';
+const tailL=mk('M298,656 C280,690 262,730 236,788 L258,780 L270,798 C290,748 306,706 308,664Z',`<path d="M296,670 C282,706 268,738 252,770" ${sh}/>`);
+const tailR=mk('M302,656 C322,692 342,728 372,786 L350,780 L338,798 C316,748 300,710 294,664Z',`<path d="M306,670 C320,704 334,732 350,762" ${sh}/>`);
+const loopL=mk('M300,652 C262,610 196,618 190,656 C186,690 262,688 300,660Z',`<path d="M296,656 C262,640 222,640 204,656" fill="none" stroke="${INK}" stroke-width=".7" style="${IS}"/><path d="M270,630 C240,626 214,636 204,650" ${sh}/>`);
+const loopR=mk('M304,652 C342,610 408,618 414,656 C418,690 342,688 304,660Z',`<path d="M308,656 C342,640 382,640 400,656" fill="none" stroke="${INK}" stroke-width=".7" style="${IS}"/><path d="M334,630 C364,626 390,636 400,650" ${sh}/>`);
+const knot=mk('M288,654 C288,640 316,640 316,654 C316,672 288,672 288,654Z',`<path d="M294,650 C298,646 306,646 310,650" ${sh}/>`);
+ups.push(T=>{const r=cl((T-9.3)/2.4),ink=(.8*cl((r-.3)/.5)).toFixed(3);rb.style.setProperty('--ink',ink);
+ const tp=eo(cl((r-.25)/.75)),lp=eb(cl(r/.7)),kp=eb(cl((r-.5)/.5));
+ const t=(g,sx,sy,a)=>g.setAttribute('transform',`translate(302 660) rotate(${a}) scale(${sx} ${sy}) translate(-302 -660)`);
+ const a=ribSway;t(tailL,.2+.8*tp,tp,a);t(tailR,.2+.8*tp,tp,-a);t(loopL,Math.max(lp,.001),Math.max(lp,.001),0);t(loopR,Math.max(lp,.001),Math.max(lp,.001),0);t(knot,Math.max(kp,.001),Math.max(kp,.001),0)});
+let ribSway=0;
+
+/* ---- pollen ---- */
+const pol=$('#pol'),PO=[];
+for(let i=0;i<26;i++){const c=el('circle',{r:1+rnd()*2.2,fill:['#f7d774','#f6b7cb','#fff'][i%3]},pol);PO.push({c,x:90+rnd()*420,y:rnd(),sp:.012+rnd()*.02,ph:rnd()*6.28,s:rnd()})}
+
+/* ---- loop ---- */
+const END=11.8;let T=0,AT=0,speed=1,done=false,last=performance.now();
+const title=$('#title'),noteT=$('#noteT');
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;AT+=dt;T+=dt*speed;
+ if(T<END+.1){ups.forEach(u=>u(T));done=false}else if(!done){ups.forEach(u=>u(END));done=true}
+ const amb=cl((T-9.8)/2.5),tt=cl((T-9.5)/2);
+ title.style.opacity=tt;title.style.transform=`translateY(${(1-tt)*8}px)`;noteT.style.opacity=cl((T-10.3)/2);
+ ribSway=amb*Math.sin(AT*1.1)*2.5;
+ FL.forEach(f=>f.sw(amb*Math.sin(AT*.9+f.ph)*2.2));
+ $('#bq').setAttribute('transform',`rotate(${amb*Math.sin(AT*.6)*1.1} 300 655)`);
+ PO.forEach(o=>{const q=(o.y-AT*o.sp)%1,f=q<0?q+1:q;o.c.setAttribute('cx',o.x+Math.sin(AT*.7+o.ph)*18);o.c.setAttribute('cy',700-f*640);o.c.setAttribute('opacity',(amb*Math.sin(Math.PI*f)*.85*(.6+.4*Math.sin(AT*3+o.ph*2))).toFixed(2))});
+ requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+
+/* ---- UI ---- */
+$('#replay').onclick=()=>{T=0;done=false};
+document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{speed=+b.dataset.s;document.querySelectorAll('[data-s]').forEach(x=>x.classList.toggle('on',x===b))});
+$('#inT').oninput=e=>{title.textContent=e.target.value;document.title=e.target.value};
+$('#inN').oninput=e=>noteT.textContent=e.target.value;
+if(matchMedia('(prefers-reduced-motion: reduce)').matches){speed=1.8;document.querySelectorAll('[data-s]').forEach(x=>x.classList.toggle('on',x.dataset.s==='1.8'))}
+</script></body></html>
+"""
+
+
+@app.get("/")
+def index():
+    to = html.escape(request.args.get("to", "For My Love")[:40])
+    note = html.escape(request.args.get("note", "with all my heart")[:70])
+    return Response(PAGE.replace("__TO__", to).replace("__NOTE__", note), mimetype="text/html")
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=False)
