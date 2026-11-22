@@ -1,20 +1,7 @@
-"""
-Watercolor Bouquet - a blooming, hand-painted-style bouquet in the browser.
-
-Run:
-    pip install flask
-    python app.py
-Then open http://localhost:5000   (try /?to=For%20Anna&note=forever%20yours)
-"""
-import html
-from flask import Flask, Response, request
-
-app = Flask(__name__)
-
-PAGE = r"""<!doctype html>
+<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>__TO__</title>
+<title>For My Love</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Great+Vibes&display=swap" rel="stylesheet">
 <style>
 :root{--charcoal:#2E2A2B;--paper:#FAF8F5;--rose:#b8607f}
@@ -37,7 +24,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--rose);outline-o
 .seg button.on{background:#f6d9e3;font-weight:600}
 input{border:0;border-bottom:1px solid #cdbfc0;background:transparent;padding:6px 4px;width:150px;text-align:center}
 </style></head><body>
-<header><h1 id="title">__TO__</h1><p id="noteT">__NOTE__</p></header>
+<header><h1 id="title">For My Love</h1><p id="noteT">with all my heart</p></header>
 <svg id="art" viewBox="0 0 600 820" preserveAspectRatio="xMidYMid meet" aria-label="A watercolor bouquet blooming">
 <defs>
 <filter id="wc" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4" xChannelSelector="R" yChannelSelector="G"/></filter>
@@ -50,8 +37,8 @@ input{border:0;border-bottom:1px solid #cdbfc0;background:transparent;padding:6p
 <div class="bar">
 <button id="replay">Replay bloom</button>
 <div class="seg" role="group" aria-label="Speed"><button data-s=".6">Slow</button><button data-s="1" class="on">Normal</button><button data-s="1.8">Fast</button></div>
-<input id="inT" value="__TO__" maxlength="40" aria-label="Title">
-<input id="inN" value="__NOTE__" maxlength="70" aria-label="Note">
+<input id="inT" value="For My Love" maxlength="40" aria-label="Title">
+<input id="inN" value="with all my heart" maxlength="70" aria-label="Note">
 </div>
 <script>
 const $=s=>document.querySelector(s),NS='http://www.w3.org/2000/svg';
@@ -162,16 +149,9 @@ document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{speed=+b.dataset
 $('#inT').oninput=e=>{title.textContent=e.target.value;document.title=e.target.value};
 $('#inN').oninput=e=>noteT.textContent=e.target.value;
 if(matchMedia('(prefers-reduced-motion: reduce)').matches){speed=1.8;document.querySelectorAll('[data-s]').forEach(x=>x.classList.toggle('on',x.dataset.s==='1.8'))}
+</script>
+<script>
+(()=>{const q=new URLSearchParams(location.search),t=q.get('to'),n=q.get('note');
+if(t){document.title=t;document.getElementById('title').textContent=t;document.getElementById('inT').value=t}
+if(n){document.getElementById('noteT').textContent=n;document.getElementById('inN').value=n}})();
 </script></body></html>
-"""
-
-
-@app.get("/")
-def index():
-    to = html.escape(request.args.get("to", "I love you baby!!!!")[:40])
-    note = html.escape(request.args.get("note", "with all my heart")[:70])
-    return Response(PAGE.replace("__TO__", to).replace("__NOTE__", note), mimetype="text/html")
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
