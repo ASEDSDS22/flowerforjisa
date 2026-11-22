@@ -168,7 +168,7 @@ if(matchMedia('(prefers-reduced-motion: reduce)').matches){speed=1.8;document.qu
 
 @app.get("/")
 def index():
-    to = html.escape(request.args.get("to", "For My Love")[:40])
+    to = html.escape(request.args.get("to", "I love you baby!!!!")[:40])
     note = html.escape(request.args.get("note", "with all my heart")[:70])
     return Response(PAGE.replace("__TO__", to).replace("__NOTE__", note), mimetype="text/html")
 
